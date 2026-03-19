@@ -18,34 +18,41 @@ def get_leads():
     chrome_options.add_argument("--headless")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    # User-Agent badalne se Google ko lagta hai ki ye real browser hai
-    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36")
+    chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36")
     
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     leads = []
     
-    # Simple Query taaki block na ho
-    query = 'site:linkedin.com "hiring website developer" OR "school website requirement"'
+    # DuckDuckGo is more automation friendly than Google
+    search_url = "https://duckduckgo.com/?q=site:linkedin.com+%22looking+for+website+developer%22+OR+%22school+website+requirement%22&ia=web"
     
     try:
-        driver.get("https://www.google.com")
-        time.sleep(5) # Thoda zyada wait
+        print(f"DEBUG: Opening DuckDuckGo...")
+        driver.get(search_url)
+        time.sleep(10) # Results load hone ka intezar
+
+        # DuckDuckGo ke search results 'article' ya 'div.result' mein hote hain
+        results = driver.find_elements(By.CSS_SELECTOR, "li[data-layout='organic']")
         
-        search = driver.find_element(By.NAME, "q")
-        search.send_keys(query)
-        search.send_keys(Keys.ENTER)
-        time.sleep(7) # Results load hone ka intezar
+        print(f"DEBUG: Found {len(results)} potential leads on DuckDuckGo")
 
-        results = driver.find_elements(By.CSS_SELECTOR, "div.g")
-        print(f"DEBUG: Found {len(results)} raw results on Google")
-
-        for res in results[:15]:
+        for res in results[:20]:
             try:
-                title = res.find_element(By.TAG_NAME, "h3").text
-                link = res.find_element(By.TAG_NAME, "a").get_attribute("href")
-                if "linkedin.com" in link: # Sirf kaam ke links
-                    leads.append({"Date": datetime.now().date(), "Title": title, "Link": link})
-            except: continue
+                # Title aur Link nikalna
+                anchor = res.find_element(By.CSS_SELECTOR, "a[data-testid='result-title-a']")
+                title = anchor.text
+                link = anchor.get_attribute("href")
+                
+                if "linkedin.com" in link:
+                    leads.append({
+                        "Date": datetime.now().strftime("%Y-%m-%d"),
+                        "Title": title,
+                        "Link": link,
+                        "Source": "DuckDuckGo/LinkedIn"
+                    })
+            except Exception as e:
+                continue
+                
     except Exception as e:
         print(f"DEBUG: Scraping Error: {e}")
     finally:
@@ -59,9 +66,9 @@ def send_email(file_path, count):
     receiver = os.environ.get('RECEIVER_EMAIL')
 
     msg = MIMEMultipart()
-    msg['From'] = sender
+    msg['From'] = f"Lead Bot <{sender}>"
     msg['To'] = receiver
-    msg['Subject'] = f"Found {count} New Leads - {datetime.now().date()}"
+    msg['Subject'] = f"🚀 {count} New Service Leads Found - {datetime.now().date()}"
     
     with open(file_path, "rb") as f:
         part = MIMEBase('application', 'octet-stream')
@@ -70,19 +77,22 @@ def send_email(file_path, count):
         part.add_header('Content-Disposition', f"attachment; filename={file_path}")
         msg.attach(part)
 
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
-        server.starttls()
-        server.login(sender, password)
-        server.send_message(msg)
-        print("DEBUG: Final Leads Email Sent!")
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(sender, password)
+            server.send_message(msg)
+            print("DEBUG: Final Leads Email Sent!")
+    except Exception as e:
+        print(f"DEBUG: Email sending failed: {e}")
 
 if __name__ == "__main__":
     leads_data = get_leads()
     
     if leads_data:
         df = pd.DataFrame(leads_data)
-        file_name = "Social_Leads.xlsx"
+        file_name = f"Leads_Report_{datetime.now().strftime('%d_%b')}.xlsx"
         df.to_excel(file_name, index=False)
         send_email(file_name, len(leads_data))
     else:
-        print("DEBUG: No new leads found today. Skipping email.")
+        print("DEBUG: No new leads found. Try changing keywords in search_url.")
