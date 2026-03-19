@@ -25,4 +25,5 @@ jobs:
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }} # Naya Secret
         run: python lead_script.py
