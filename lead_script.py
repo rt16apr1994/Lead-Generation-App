@@ -44,24 +44,37 @@ def get_leads():
 
 # Email Logic (Using GitHub Secrets)
 def send_email(file_path):
-    sender = os.environ['EMAIL_USER']
-    password = os.environ['EMAIL_PASS']
-    receiver = os.environ['RECEIVER_EMAIL']
+    sender = os.environ.get('EMAIL_USER')
+    password = os.environ.get('EMAIL_PASS')
+    receiver = os.environ.get('RECEIVER_EMAIL')
+
+    print(f"Debug: Sending from {sender} to {receiver}") # Logs mein dikhega
+
+    if not sender or not password:
+        print("Error: Email credentials missing in Secrets!")
+        return
 
     msg = MIMEMultipart()
+    msg['From'] = sender
+    msg['To'] = receiver
     msg['Subject'] = "Daily Free Leads Report"
     
-    with open(file_path, "rb") as f:
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(f.read())
-        encoders.encode_base64(part)
-        part.add_header('Content-Disposition', f"attachment; filename={file_path}")
-        msg.attach(part)
+    try:
+        with open(file_path, "rb") as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f"attachment; filename={file_path}")
+            msg.attach(part)
 
-    with smtplib.SMTP('smtp.gmail.com', 587) as server:
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender, password)
         server.send_message(msg)
+        server.quit()
+        print("Success: Email sent successfully!")
+    except Exception as e:
+        print(f"Error occurred while sending email: {e}")
 
 if __name__ == "__main__":
     data = get_leads()
