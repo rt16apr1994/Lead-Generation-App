@@ -20,6 +20,7 @@ def get_leads_from_apify():
         "countryCode": "in", # India ke liye
         "languageCode": "en",
         "maxResults": 20,
+        "tbs": "qdr:d2",
     }
 
     print("DEBUG: Starting Apify Actor...")
