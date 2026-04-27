@@ -31,15 +31,27 @@ def get_next_keyword():
 
 def run_scraper(query):
     print(f"Searching for: {query}")
+    
+    # Ye input parameters naye Google Maps Scraper ke hisaab se hain
     run_input = {
-        "queries": [query],
-        "maxPagesPerQuery": 1,
-        "resultsPerPage": 20,
+        "searchStringsArray": [query],
+        "maxCrawledPlacesPerSearch": 20,
         "language": "en",
+        "exportPlaceUrls": False
     }
-    # Google Maps Scraper Actor
-    run = client.actor("apify/google-maps-scraper").call(run_input=run_input)
-    return list(client.dataset(run["defaultDatasetId"]).iterate_items())
+    
+    try:
+        # Hum generic ID ya stable compass actor use kar rahe hain
+        print("Starting Apify Actor...")
+        run = client.actor("compass/google-maps-scraper").call(run_input=run_input)
+        
+        print("Fetching results from dataset...")
+        return list(client.dataset(run["defaultDatasetId"]).iterate_items())
+        
+    except Exception as e:
+        print(f"Detailed Error: {e}")
+        # Agar compass wala bhi na chale, toh try generic search
+        return []
 
 def filter_and_save_leads(raw_data):
     history_file = 'leads_history.csv'
