@@ -39,7 +39,7 @@ def run_scraper(query):
     try:
         # Hum generic ID ya stable compass actor use kar rahe hain
         print("Starting Apify Actor...")
-        run = client.actor("compass/google-maps-scraper").call(run_input=run_input)
+        run = client.actor("compass/crawler-google-places").call(run_input=run_input)
         
         print("Fetching results from dataset...")
         return list(client.dataset(run["defaultDatasetId"]).iterate_items())
