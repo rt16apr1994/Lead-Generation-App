@@ -35,6 +35,13 @@ jobs:
         run: |
           git config --global user.name "LeadBot"
           git config --global user.email "bot@github.com"
+          
+          # Agar script ne file nahi banayi, toh khali file create karo (Error rokne ke liye)
+          if [ ! -f leads_history.csv ]; then
+            echo "placeId,title,date" > leads_history.csv
+          fi
+          
           git add leads_history.csv
-          git commit -m "Update leads history [skip ci]" || echo "No changes"
-          git push
+          
+          # Sirf tab commit karein jab file mein naya data ho
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update leads history [skip ci]" && git push)
