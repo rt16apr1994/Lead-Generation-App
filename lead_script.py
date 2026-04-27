@@ -17,11 +17,7 @@ client = ApifyClient(APIFY_TOKEN)
 
 # Search Keywords ki list
 KEYWORDS = [
-    "Private Schools in Bhopal", 
-    "Gyms in Bhopal", 
-    "Restaurants in Bhopal", 
-    "Clinics in Bhopal", 
-    "Bakers in Bhopal"
+    "Private Schools in Bhopal"
 ]
 
 def get_next_keyword():
