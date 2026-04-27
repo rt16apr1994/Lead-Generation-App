@@ -38,7 +38,7 @@ def run_scraper(query):
         "language": "en",
     }
     # Google Maps Scraper Actor
-    run = client.actor("komoot/google-maps-scraper").call(run_input=run_input)
+    run = client.actor("apify/google-maps-scraper").call(run_input=run_input)
     return list(client.dataset(run["defaultDatasetId"]).iterate_items())
 
 def filter_and_save_leads(raw_data):
