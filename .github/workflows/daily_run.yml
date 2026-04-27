@@ -1,14 +1,17 @@
 name: Daily Lead Generation
+
 on:
   schedule:
-    - cron: '0 3 * * *' # Roz subah 8:30 AM IST (3:00 UTC)
-  workflow_dispatch: # Manual run ke liye button
+    - cron: '0 4 * * *' # Daily morning 9:30 AM IST (approx)
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Important for saving history
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -16,14 +19,22 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install apify-client pandas openpyxl
 
       - name: Run Lead Script
         env:
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
           EMAIL_USER: ${{ secrets.EMAIL_USER }}
           EMAIL_PASS: ${{ secrets.EMAIL_PASS }}
           RECEIVER_EMAIL: ${{ secrets.RECEIVER_EMAIL }}
-          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }} # Naya Secret
-        run: python lead_script.py
+        run: python main.py
+
+      - name: Save History
+        run: |
+          git config --global user.name "LeadBot"
+          git config --global user.email "bot@github.com"
+          git add leads_history.csv
+          git commit -m "Update leads history [skip ci]" || echo "No changes"
+          git push
