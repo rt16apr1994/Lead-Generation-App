@@ -137,7 +137,7 @@ if __name__ == "__main__":
     file = filter_and_save_leads(data)
     
     if file:
-        # send_email(file, current_query)
+        send_email(file, current_query)
         print(f"Success: {file} generated.")
     else:
         print("No new leads found today.")
