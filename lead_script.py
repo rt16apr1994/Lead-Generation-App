@@ -55,48 +55,72 @@ def run_scraper(query):
 
 def filter_and_save_leads(raw_data):
     history_file = 'leads_history.csv'
+    current_date = datetime.now().strftime("%Y-%m-%d")
     
-    # History load karein
+    # 1. History load karein ya nayi file ka structure banayein
     if os.path.exists(history_file):
-        history_df = pd.read_csv(history_file)
-        processed_ids = set(history_df['placeId'].astype(str).tolist())
+        try:
+            history_df = pd.read_csv(history_file)
+            # Ensure placeId is string for proper comparison
+            processed_ids = set(history_df['placeId'].astype(str).tolist())
+        except Exception as e:
+            print(f"History file read error: {e}. Creating new.")
+            processed_ids = set()
+            history_df = pd.DataFrame(columns=['placeId', 'title', 'date'])
     else:
         processed_ids = set()
         history_df = pd.DataFrame(columns=['placeId', 'title', 'date'])
 
-    new_leads = []
-    current_date = datetime.now().strftime("%Y-%m-%d")
+    new_leads_for_excel = []
+    new_history_entries = []
 
+    # 2. Apify se aaye data ko filter karein
     for item in raw_data:
-        place_id = str(item.get('placeId'))
+        # Apify ke naye scraper mein 'placeId' ya 'id' use hota hai
+        place_id = str(item.get('placeId') or item.get('id') or "")
         website = item.get('website')
         phone = item.get('phone')
+        title = item.get('title')
 
-        # Filter: Website nahi honi chahiye, Phone hona chahiye, aur Duplicate nahi hona chahiye
-        if not website and phone and place_id not in processed_ids:
-            lead = {
-                "Business Title": item.get('title'),
-                "Contact/WhatsApp": phone,
-                "Location": item.get('address'),
-                "Category": item.get('categoryName'),
-                "placeId": place_id,
+        if not place_id or not title:
+            continue
+
+        # Logic: Website nahi honi chahiye AUR ye lead pehle nahi aayi honi chahiye
+        if not website and place_id not in processed_ids:
+            # Excel file ke liye details
+            lead_detail = {
+                "Business Title": title,
+                "Contact/WhatsApp": phone if phone else "Not Available",
+                "Location": item.get('address', 'Bhopal'),
+                "Category": item.get('categoryName', 'N/A'),
                 "Date Found": current_date
             }
-            new_leads.append(lead)
+            new_leads_for_excel.append(lead_detail)
+            
+            # History file update karne ke liye details
+            new_history_entries.append({
+                'placeId': place_id,
+                'title': title,
+                'date': current_date
+            })
+            # Current run mein dobara duplicate na aaye isliye set mein add karein
             processed_ids.add(place_id)
 
-    if new_leads:
-        # Update History File
-        new_history_entry = pd.DataFrame(new_leads)[['placeId', 'Business Title', 'Date Found']]
-        new_history_entry.columns = ['placeId', 'title', 'date']
-        pd.concat([history_df, new_history_entry]).to_csv(history_file, index=False)
-        
-        # Create Excel for Email
-        final_df = pd.DataFrame(new_leads).drop(columns=['placeId'])
-        filename = f"Leads_{current_date}.xlsx"
+    # 3. Agar nayi leads mili hain toh files update karein
+    if new_leads_for_excel:
+        # Update leads_history.csv
+        new_hist_df = pd.DataFrame(new_history_entries)
+        updated_history = pd.concat([history_df, new_hist_df], ignore_index=True)
+        updated_history.to_csv(history_file, index=False)
+        print(f"Added {len(new_leads_for_excel)} new leads to history.")
+
+        # Create Excel file for Email
+        filename = f"Leads_Bhopal_{current_date}.xlsx"
+        final_df = pd.DataFrame(new_leads_for_excel)
         final_df.to_excel(filename, index=False)
         return filename
     
+    print("No new 'No-Website' leads found in this run.")
     return None
 
 def send_email(filename, query):
