@@ -35,7 +35,7 @@ def run_scraper(query):
     # Ye input parameters naye Google Maps Scraper ke hisaab se hain
     run_input = {
         "searchStringsArray": [query],
-        "maxCrawledPlacesPerSearch": 20,
+        "maxCrawledPlacesPerSearch": 100,
         "language": "en",
         "exportPlaceUrls": False
     }
