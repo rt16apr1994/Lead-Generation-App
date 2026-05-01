@@ -119,6 +119,8 @@ def filter_and_save_leads(raw_data):
     print("No new 'No-Website' leads found in this run.")
     return None
 
+import smtplib
+
 def send_email(filename, query):
     msg = MIMEMultipart()
     msg['From'] = EMAIL_USER
@@ -126,9 +128,18 @@ def send_email(filename, query):
     msg['Subject'] = f"Daily Leads: {query} ({datetime.now().strftime('%d %b')})"
 
     body = f"Hi,\n\nPlease find attached the list of businesses in Bhopal that don't have a website.\n\nSearch Category: {query}"
-    # Attach body and file... (Existing Email Logic)
-    # [Shortened for brevity - reuse your existing attachment code here]
-    print(f"Email sent with {filename}")
+    msg.attach(MIMEText(body, 'plain'))
+
+    # ... (Your existing code to attach the filename) ...
+
+    # --- THIS IS THE MISSING PART THAT ACTUALLY SENDS ---
+    try:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(EMAIL_USER, EMAIL_PASS) # EMAIL_PASS must be your App Password
+            server.send_message(msg)
+        print(f"✅ Success: Email sent with {filename}")
+    except Exception as e:
+        print(f"❌ Error: Failed to send email. {e}")
 
 # Execution
 if __name__ == "__main__":
