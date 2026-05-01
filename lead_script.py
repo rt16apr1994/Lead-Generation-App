@@ -123,31 +123,53 @@ def filter_and_save_leads(raw_data):
 import smtplib
 
 def send_email(filename, query):
+    # 1. Create the root message and set headers
     msg = MIMEMultipart()
     msg['From'] = EMAIL_USER
     msg['To'] = RECEIVER_EMAIL
     msg['Subject'] = f"Daily Leads: {query} ({datetime.now().strftime('%d %b')})"
 
-    body = f"Hi,\n\nPlease find attached the list of businesses in Bhopal that don't have a website.\n\nSearch Category: {query}"
-    msg.attach(MIMEText(body, 'plain')) # This is the line that failed
+    # 2. Define the email body
+    body = f"Hi,\n\nPlease find attached the list of businesses in Bhopal that don't have a website.\n\nSearch Category: {query}\n\nBest regards,\nLead Gen Bot"
+    msg.attach(MIMEText(body, 'plain'))
 
-    # Logic to attach the CSV file
+    # 3. Handle the File Attachment
     try:
-        with open(filename, "rb") as attachment:
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-        
-        encoders.encode_base64(part)
-        part.add_header(
-            "Content-Disposition",
-            f"attachment; filename= {filename}",
-        )
-        msg.attach(part)
-        
-        # ... your smtplib logic from the previous step ...
-        
+        if os.path.exists(filename):
+            with open(filename, "rb") as attachment:
+                # Add file as application/octet-stream
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+
+            # Encode file in ASCII characters to send by email    
+            encoders.encode_base64(part)
+
+            # Add header as key/value pair to attachment part
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename= {filename}",
+            )
+
+            # Add attachment to message
+            msg.attach(part)
+        else:
+            print(f"Warning: {filename} not found. Sending email without attachment.")
+            
     except Exception as e:
-        print(f"Error attaching or sending: {e}")
+        print(f"Error while attaching file: {e}")
+
+    # 4. Connect to Gmail and Send
+    try:
+        print(f"Connecting to Gmail SMTP to send {filename}...")
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(EMAIL_USER, EMAIL_PASS)
+            server.send_message(msg)
+        print("✅ Success: Email sent successfully!")
+        
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Auth Error: Check your App Password and EMAIL_USER secret.")
+    except Exception as e:
+        print(f"❌ Failed to send email: {e}")
 
 # Execution
 if __name__ == "__main__":
