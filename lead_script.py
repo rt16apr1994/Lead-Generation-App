@@ -5,6 +5,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from email.mime.text import MIMEText
 from datetime import datetime
 
 # --- Configuration ---
@@ -128,18 +129,25 @@ def send_email(filename, query):
     msg['Subject'] = f"Daily Leads: {query} ({datetime.now().strftime('%d %b')})"
 
     body = f"Hi,\n\nPlease find attached the list of businesses in Bhopal that don't have a website.\n\nSearch Category: {query}"
-    msg.attach(MIMEText(body, 'plain'))
+    msg.attach(MIMEText(body, 'plain')) # This is the line that failed
 
-    # ... (Your existing code to attach the filename) ...
-
-    # --- THIS IS THE MISSING PART THAT ACTUALLY SENDS ---
+    # Logic to attach the CSV file
     try:
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(EMAIL_USER, EMAIL_PASS) # EMAIL_PASS must be your App Password
-            server.send_message(msg)
-        print(f"✅ Success: Email sent with {filename}")
+        with open(filename, "rb") as attachment:
+            part = MIMEBase("application", "octet-stream")
+            part.set_payload(attachment.read())
+        
+        encoders.encode_base64(part)
+        part.add_header(
+            "Content-Disposition",
+            f"attachment; filename= {filename}",
+        )
+        msg.attach(part)
+        
+        # ... your smtplib logic from the previous step ...
+        
     except Exception as e:
-        print(f"❌ Error: Failed to send email. {e}")
+        print(f"Error attaching or sending: {e}")
 
 # Execution
 if __name__ == "__main__":
