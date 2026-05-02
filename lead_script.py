@@ -58,7 +58,6 @@ def filter_and_save_leads(raw_data):
     if os.path.exists(history_file):
         try:
             history_df = pd.read_csv(history_file)
-            # Ensure placeId is string for proper comparison
             processed_ids = set(history_df['placeId'].astype(str).tolist())
         except Exception as e:
             print(f"History file read error: {e}. Creating new.")
@@ -73,11 +72,14 @@ def filter_and_save_leads(raw_data):
 
     # 2. Apify se aaye data ko filter karein
     for item in raw_data:
-        # Apify ke naye scraper mein 'placeId' ya 'id' use hota hai
         place_id = str(item.get('placeId') or item.get('id') or "")
         website = item.get('website')
         phone = item.get('phone')
         title = item.get('title')
+        
+        # Email extraction logic (Apify scrapers aksar list dete hain)
+        emails_list = item.get('emails', [])
+        email_str = ", ".join(emails_list) if isinstance(emails_list, list) else str(emails_list)
 
         if not place_id or not title:
             continue
@@ -87,25 +89,24 @@ def filter_and_save_leads(raw_data):
             # Excel file ke liye details
             lead_detail = {
                 "Business Title": title,
-                "Contact/WhatsApp": phone if phone else "Not Available",
+                "Contact Number": phone if phone else "Not Available", # New Column
+                "Email ID": email_str if email_str else "Not Available", # New Column
                 "Location": item.get('address', 'Bhopal'),
                 "Category": item.get('categoryName', 'N/A'),
                 "Date Found": current_date
             }
             new_leads_for_excel.append(lead_detail)
             
-            # History file update karne ke liye details
+            # History file update
             new_history_entries.append({
                 'placeId': place_id,
                 'title': title,
                 'date': current_date
             })
-            # Current run mein dobara duplicate na aaye isliye set mein add karein
             processed_ids.add(place_id)
 
     # 3. Agar nayi leads mili hain toh files update karein
     if new_leads_for_excel:
-        # Update leads_history.csv
         new_hist_df = pd.DataFrame(new_history_entries)
         updated_history = pd.concat([history_df, new_hist_df], ignore_index=True)
         updated_history.to_csv(history_file, index=False)
@@ -119,7 +120,7 @@ def filter_and_save_leads(raw_data):
     
     print("No new 'No-Website' leads found in this run.")
     return None
-
+    
 import smtplib
 
 def send_email(filename, query):
